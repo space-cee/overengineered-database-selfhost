@@ -37,10 +37,7 @@ function groupAndJoin(parts: string[]): string[]
 // could've done generic but I'm too lazy
 const convertToSQL = async (filepath: string, callback: (line: string[][]) => void) =>
 {
-    if (!await Bun.file(filepath).exists())
-        return;
-
-    if (extname(filepath) === ".processed")
+    if (extname(filepath) !== ".txt")
         return;
 
     const fileStream = createReadStream(filepath);
