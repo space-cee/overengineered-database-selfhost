@@ -80,9 +80,7 @@ export namespace DatabaseInteractions
         db.transaction((data: typeof playerData) =>
         {
             for (const d of data) {
-                console.log(
-                    prep.run({ $player: d.playerId, $data: d.data })
-                );
+                prep.run({ $player: d.playerId, $data: d.data });
             }
         })(playerData);
     }
