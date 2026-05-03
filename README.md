@@ -23,7 +23,20 @@ bun run index.ts
 
 | Method | Endpoint | Description | Parameters/Body |
 | --- | --- | --- | --- |
-| GET | /player/:id | Get player data entry by ID | id (player ID) |
-| GET | /save/:id | Get the latest save for a player | id (player ID) |
-| POST | /player | Insert or update player entry | { slotIndex: number, playerId: string, data: string, token: string } |
-| POST | /save | Insert or update a save entry | { playerId: string, data: string, token: string } |
+| GET | /overengineered/player/:id | Get player data entry by ID | id (player ID) |
+| GET | /overengineered/save/:id | Get the latest save for a player | id (player ID) |
+| POST | /overengineered/player | Insert or update player entry | { slotIndex: number, playerId: string, data: string, token: string } |
+| POST | /overengineered/save | Insert or update a save entry | { playerId: string, data: string, token: string } |
+
+### example
+To request player with ID "3698880271" you'd need to use GET with endpoint:
+```
+<HOST_IP>:1367/player/3698880271
+```
+
+The result will be:
+```json
+{"increment":1,"slot_index":"-2","player_id":"3698880271","data":"{\"blocks\": [], \"version\": 31}"}
+```
+
+If there are duplicates then the first from the list will be taken.

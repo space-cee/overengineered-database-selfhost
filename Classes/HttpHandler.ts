@@ -6,24 +6,24 @@ import { write_token } from '../Access Tokens/securityTokens';
 
 export namespace HttpHandler
 {
-    export const init = (db: Database, port: number) =>
+    export const init = (db: Database, base: string, port: number) =>
     {
         const app = new Elysia();
         app.listen(port);
 
-        app.get('/player/:id', ({ params: { id } }) =>
+        app.get(`/${base}/player/:id`, ({ params: { id } }) =>
         {
             const player = DatabaseInteractions.getPlayerDataEntryByID(db, id);
             return player ?? { error: 'Not found' };
         });
 
-        app.get('/save/:id', ({ params: { id } }) =>
+        app.get(`/${base}/save/:id`, ({ params: { id } }) =>
         {
             const player = DatabaseInteractions.getSavesOfPlayerByID(db, id);
             return player ?? { error: 'Not found' };
         });
 
-        app.post('/player', ({ body }) =>
+        app.post(`/${base}/player`, ({ body }) =>
         {
             DatabaseInteractions.insertPlayers(db, [body]);
             if (body.token !== write_token) return { error: "incorrect token" };
@@ -37,7 +37,7 @@ export namespace HttpHandler
             })
         });
 
-        app.post('/save', ({ body }) =>
+        app.post(`/${base}/save`, ({ body }) =>
         {
             DatabaseInteractions.insertSave(db, [body]);
             if (body.token !== write_token) return { error: "incorrect token" };
