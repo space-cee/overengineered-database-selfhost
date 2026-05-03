@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 
 
 export type playerDataEntry = {
-    slotIndex: string,
+    slotIndex: number,
     playerId: string,
     data: string,
 }
@@ -15,7 +15,7 @@ export namespace DatabaseInteractions
         db.run(`
       CREATE TABLE IF NOT EXISTS players (
         increment INTEGER PRIMARY KEY AUTOINCREMENT,
-        slot_index TEXT,
+        slot_index INTEGER,
         player_id TEXT UNIQUE,
         data TEXT
       )
@@ -31,8 +31,10 @@ export namespace DatabaseInteractions
     ) =>
     {
         const prep = db.prepare(`
-      INSERT OR REPLACE INTO players (slot_index, player_id, data) 
-      VALUES ($slot, $player, $data)
+        INSERT INTO players (slot_index, player_id, data) 
+        VALUES ($slot, $player, $data)
+        ON CONFLICT(player_id) DO UPDATE SET 
+            data = excluded.data
     `);
         db.transaction((data) =>
         {
@@ -67,14 +69,20 @@ export namespace DatabaseInteractions
         }[]
     ) =>
     {
+
         const prep = db.prepare(`
-      INSERT OR REPLACE INTO saves (player_id, data) 
-      VALUES ($player, $data)
+        INSERT INTO saves (player_id, data) 
+        VALUES ($player, $data)
+        ON CONFLICT(player_id) DO UPDATE SET 
+            data = excluded.data
     `);
-        db.transaction((data) =>
+
+        db.transaction((data: typeof playerData) =>
         {
             for (const d of data) {
-                prep.run({ $player: d.playerId, $data: d.data });
+                console.log(
+                    prep.run({ $player: d.playerId, $data: d.data })
+                );
             }
         })(playerData);
     }

@@ -1,38 +1,13 @@
 import { DatabaseInteractions, type playerDataEntry } from "./Classes/DatabaseInteractions";
-import { createReadStream, existsSync, readdirSync, renameSync } from "node:fs";
+import { createReadStream, existsSync, readdirSync, } from "node:fs";
 import { createInterface } from "node:readline";
 import { Database } from "bun:sqlite";
 import { HttpHandler } from "./Classes/HttpHandler";
 import { basename, extname, resolve } from "node:path";
+import { rename } from "node:fs/promises";
 
 console.time("Import");
 
-
-function groupAndJoin(parts: string[]): string[]
-{
-    const result: string[] = [];
-    let currentGroup: string[] = [];
-
-    for (const part of parts) {
-        const trimmed = part.trim();
-
-        if (trimmed !== "") {
-            currentGroup.push(trimmed);
-        } else {
-
-            if (currentGroup.length > 0) {
-                result.push(currentGroup.join(""));
-                currentGroup = [];
-            }
-        }
-    }
-
-    if (currentGroup.length > 0) {
-        result.push(currentGroup.join(" "));
-    }
-
-    return result;
-}
 
 // could've done generic but I'm too lazy
 const convertToSQL = async (filepath: string, callback: (line: string[][]) => void) =>
@@ -40,6 +15,8 @@ const convertToSQL = async (filepath: string, callback: (line: string[][]) => vo
     if (extname(filepath) !== ".txt")
         return;
 
+    console.log("filepath:", filepath);
+    const filename = basename(filepath);
     const fileStream = createReadStream(filepath);
     const rl = createInterface({
         input: fileStream,
@@ -48,23 +25,22 @@ const convertToSQL = async (filepath: string, callback: (line: string[][]) => vo
 
     // I AM TOO LAZY TO PERFORM BATCH OPERATIONS!
     const BATCH_SIZE = 5000;
-    let batch: string[][] = new Array(BATCH_SIZE);
+    let batch: string[][] = [];
     for await (const line of rl) {
-        batch.push(groupAndJoin(line.split(/[\t ]/gm)));
+        batch.push(line.split("\t"));
         if (batch.length >= BATCH_SIZE) {
             callback(batch);
             batch = [];
-            console.log(`Processed another ${BATCH_SIZE}..`)
+            console.log(`Processed another ${BATCH_SIZE} of ${filename}..`);
         }
     }
 
     if (batch.length) {
         callback(batch);
-        console.log(`Processed another ${BATCH_SIZE}..`)
+        console.log(`Processed last ${batch.length} of ${filename}.`);
     }
 
-
-    renameSync(filepath, filepath + ".processed");
+    await rename(filepath, filepath + ".processed");
 }
 
 // db handling
@@ -88,6 +64,7 @@ if (existsSync(TEXT_USERS_FOLDER)) {
         console.log(`Loading ${name}...`);
         const p = convertToSQL(resolve(TEXT_USERS_FOLDER, name), (arr) => DatabaseInteractions.insertPlayers(db, arr.map(v =>
         {
+            console.log(arr);
             const [_, slotIndex, playerId, data] = v;
             return {
                 slotIndex: Number(slotIndex!),
@@ -106,7 +83,7 @@ if (existsSync(TEXT_SAVES_FOLDER)) {
         const start = Date.now();
         const name = `players/${file}`;
         console.log(`Loading ${name}...`);
-        const p = convertToSQL(resolve(TEXT_SAVES_FOLDER, name), (arr) => DatabaseInteractions.insertSave(db,
+        const p = convertToSQL(resolve(TEXT_SAVES_FOLDER, file), (arr) => DatabaseInteractions.insertSave(db,
             arr.map(v =>
             {
                 const [playerId, data] = v;
@@ -119,6 +96,7 @@ if (existsSync(TEXT_SAVES_FOLDER)) {
         console.log(`Finished loading ${name} in ${(Date.now() - start) / 1000}s.`);
     }
 }
+
 if (!promises.length)
     console.log("No .txt files found.");
 else {
