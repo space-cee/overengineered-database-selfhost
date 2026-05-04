@@ -1,93 +1,96 @@
 import { Database } from "bun:sqlite";
 
-
 export type playerDataEntry = {
-    slotIndex: number,
-    playerId: string,
+    playerID: string,
+    data: string,
+}
+export type playerSaveEntry = {
+    playerID: string,
+    index: string,
     data: string,
 }
 
-export namespace DatabaseInteractions
-{
-
-    export const initPlayerTable = (db: Database) =>
-    {
+export namespace DatabaseInteractions {
+    /* USERID \t {
+         "data": { ... }, 
+         "slots": [ ... ],
+         "features": [ ... ],
+         "settings": { ... },
+         "achievements": { ... }
+        }
+    */
+    export const initPlayerTable = (db: Database) => {
         db.run(`
-      CREATE TABLE IF NOT EXISTS players (
-        increment INTEGER PRIMARY KEY AUTOINCREMENT,
-        slot_index INTEGER,
-        player_id TEXT UNIQUE,
-        data TEXT
-      )
-    `);
+            CREATE TABLE IF NOT EXISTS players (
+                player_id TEXT UNIQUE,
+                data TEXT
+            )
+        `);
     }
 
-    export const insertPlayers = (db: Database,
-        playerData: {
-            playerId: string,
-            data: string,
-        }[]
-    ) =>
-    {
+    export const insertPlayers = (
+        db: Database,
+        playerData: playerDataEntry[]
+    ) => {
         const prep = db.prepare(`
-        INSERT INTO players (slot_index, player_id, data) 
-        VALUES ($slot, $player, $data)
-        ON CONFLICT(player_id) DO UPDATE SET 
-            data = excluded.data
-    `);
-        db.transaction((data) =>
-        {
+                INSERT INTO players (player_id, data) 
+                VALUES ($player, $data)
+                ON CONFLICT(player_id) DO UPDATE SET data = excluded.data
+        `);
+        db.transaction((data) => {
             for (const d of data) {
-                prep.run({ $slot: d.slotIndex, $player: d.playerId, $data: d.data });
+                prep.run({ $player: d.playerID, $data: d.data });
             }
         })(playerData);
     }
 
-    export const getPlayerDataEntryByID = (db: Database, playerID: string) => db.query(`
-  SELECT * FROM players 
-  WHERE player_id = ? 
-  ORDER BY increment DESC 
-  LIMIT 1
-`).get(playerID);
+    export const getPlayerDataEntryByID = (db: Database, playerID: string): playerDataEntry => db.query(`
+        SELECT * FROM players 
+        WHERE player_id = ? 
+        LIMIT 1
+    `).get(playerID) as playerDataEntry;
 
-    export const initSavesTable = (db: Database) =>
-    {
+    // SLOT DATA:
+    //  INCREMENT \t INDEX \t USERID \t { "blocks": [ ... ], "version": ## }
+    export const initSavesTable = (db: Database) => {
         db.run(`
-      CREATE TABLE IF NOT EXISTS saves (
-        increment INTEGER PRIMARY KEY AUTOINCREMENT,
-        player_id TEXT UNIQUE,
-        data TEXT
-      )
-    `);
+            CREATE TABLE IF NOT EXISTS saves (
+            increment INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id TEXT,
+            "index" TEXT,
+            data TEXT,
+            UNIQUE(player_id, "index")
+            )
+        `);
     }
 
-    export const insertSave = (db: Database,
-        playerData: {
-            playerId: string,
-            data: string,
-        }[]
-    ) =>
-    {
-
+    export const insertSave = (
+        db: Database,
+        saveData: playerSaveEntry[]
+    ) => {
         const prep = db.prepare(`
-        INSERT INTO saves (player_id, data) 
-        VALUES ($player, $data)
-        ON CONFLICT(player_id) DO UPDATE SET 
-            data = excluded.data
-    `);
+            INSERT INTO saves (player_id, "index", data) 
+            VALUES ($player, $index, $data)
+            ON CONFLICT(player_id, "index") DO UPDATE SET data = excluded.data
+        `);
 
-        db.transaction((data: typeof playerData) =>
-        {
+        db.transaction((data: typeof saveData) => {
             for (const d of data) {
-                prep.run({ $player: d.playerId, $data: d.data });
+                prep.run({ $player: d.playerID, $index: d.index, $data: d.data });
             }
-        })(playerData);
+        })(saveData);
     }
 
-    export const getSavesOfPlayerByID = (db: Database, playerID: string) => db.query(`
-  SELECT * FROM saves 
-  WHERE player_id = ? 
-  ORDER BY increment DESC 
-  LIMIT 1
-`).get(playerID);
+    export const getSavesOfPlayerByID = (db: Database, playerID: string): playerSaveEntry[] => db.query(`
+        SELECT * FROM saves
+        WHERE player_id = ?
+        ORDER BY increment DESC
+    `).all(playerID) as playerSaveEntry[];
+
+    export const getSavesOfPlayerByIDWithIndex = (db: Database, playerID: string, index: string): playerSaveEntry => db.query(`
+        SELECT * FROM saves 
+        WHERE player_id = ? AND "index" = ?
+        ORDER BY increment DESC 
+        LIMIT 1
+    `).get(playerID, index) as playerSaveEntry;
 }

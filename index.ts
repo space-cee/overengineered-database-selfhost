@@ -1,4 +1,4 @@
-import { DatabaseInteractions, type playerDataEntry } from "./Classes/DatabaseInteractions";
+import { DatabaseInteractions, type playerDataEntry, type playerSaveEntry } from "./Classes/DatabaseInteractions";
 import { createReadStream, existsSync, readdirSync, } from "node:fs";
 import { createInterface } from "node:readline";
 import { Database } from "bun:sqlite";
@@ -6,19 +6,18 @@ import { HttpHandler } from "./Classes/HttpHandler";
 import { basename, extname, resolve } from "node:path";
 import { rename } from "node:fs/promises";
 
-console.time("Import");
-
+const unslash = (str: string) => {
+    return str.replaceAll(/\\"/g, '"');  // Replace \" with "
+}
 
 // could've done generic but I'm too lazy
-const convertToSQL = async (filepath: string, callback: (line: string[][]) => void) =>
-{
-    if (extname(filepath) !== ".txt")
-        return;
-
+const convertToSQL = async (filepath: string, callback: (line: string[][]) => void) => {
+    if (extname(filepath) !== ".txt") return;
     console.log("filepath:", filepath);
+
     const filename = basename(filepath);
     const fileStream = createReadStream(filepath);
-    const rl = createInterface({
+    const lines = createInterface({
         input: fileStream,
         crlfDelay: Infinity,
     });
@@ -26,7 +25,7 @@ const convertToSQL = async (filepath: string, callback: (line: string[][]) => vo
     // I AM TOO LAZY TO PERFORM BATCH OPERATIONS!
     const BATCH_SIZE = 5_000;
     let batch: string[][] = [];
-    for await (const line of rl) {
+    for await (const line of lines) {
         batch.push(line.split("\t"));
         if (batch.length >= BATCH_SIZE) {
             callback(batch);
@@ -43,7 +42,7 @@ const convertToSQL = async (filepath: string, callback: (line: string[][]) => vo
     await rename(filepath, filepath + ".processed");
 }
 
-// db handling
+// Make a new database or find existing one
 const DB_PATH = "./db_files/database.sqlite";
 const db = new Database(DB_PATH);
 db.run("PRAGMA journal_mode = WAL;");
@@ -52,24 +51,25 @@ db.run("PRAGMA synchronous = OFF;");
 DatabaseInteractions.initPlayerTable(db);
 DatabaseInteractions.initSavesTable(db);
 
-const promises: Promise<any>[] = [];
+const promises: Promise<void>[] = [];
 console.log("Uploading data from .txt files...")
 
-
-const TEXT_USERS_FOLDER = "./db_files/players";
-if (existsSync(TEXT_USERS_FOLDER)) {
-    for (const file of readdirSync(TEXT_USERS_FOLDER)) {
+const TEXT_PLAYERS_FOLDER = "./db_files/players";
+if (existsSync(TEXT_PLAYERS_FOLDER)) {
+    for (const file of readdirSync(TEXT_PLAYERS_FOLDER)) {
         const start = Date.now();
         const name = `saves/${file}`;
         console.log(`Loading ${name}...`);
-        const p = convertToSQL(resolve(TEXT_USERS_FOLDER, file), (arr) => DatabaseInteractions.insertPlayers(db, arr.map(v =>
-        {
-            const [playerId, data] = v;
-            return {
-                playerId: playerId!,
-                data: data!
-            };
-        })));
+        const p = convertToSQL(
+            resolve(TEXT_PLAYERS_FOLDER, file),
+            (batch) => DatabaseInteractions.insertPlayers(db, batch.map(v => {
+                const [playerID, data] = v;
+                return {
+                    playerID: playerID!,
+                    data: unslash(data!)
+                } as playerDataEntry;
+            }))
+        );
         promises.push(p);
         console.log(`Finished loading ${name} in ${(Date.now() - start) / 1000}s.`);
     }
@@ -81,15 +81,17 @@ if (existsSync(TEXT_SAVES_FOLDER)) {
         const start = Date.now();
         const name = `players/${file}`;
         console.log(`Loading ${name}...`);
-        const p = convertToSQL(resolve(TEXT_SAVES_FOLDER, file), (arr) => DatabaseInteractions.insertSave(db,
-            arr.map(v =>
-            {
-                const [playerId, data] = v;
-                return {
-                    playerId: playerId!,
-                    data: data!
-                };
-            })));
+        const p = convertToSQL(
+            resolve(TEXT_SAVES_FOLDER, file),
+            (batch) => DatabaseInteractions.insertSave(db,
+                batch.map(v => {
+                    const [increment, index, playerID, data] = v;
+                    return {
+                        playerID: playerID!,
+                        index: index!,
+                        data: unslash(data!)
+                    } as playerSaveEntry;
+                })));
         promises.push(p);
         console.log(`Finished loading ${name} in ${(Date.now() - start) / 1000}s.`);
     }
@@ -105,7 +107,6 @@ else {
 // http server
 HttpHandler.init(db, "overengineered", 1367);
 
-export const getAllSaves = (db: Database) =>
-{
+export const getAllSaves = (db: Database) => {
     return db.query("SELECT * FROM players").all();
 };
