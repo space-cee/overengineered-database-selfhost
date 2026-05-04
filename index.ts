@@ -6,12 +6,9 @@ import { HttpHandler } from "./Classes/HttpHandler";
 import { basename, extname, resolve } from "node:path";
 import { rename } from "node:fs/promises";
 
-const unslash = (str: string) => {
-    return str.replaceAll(/\\"/g, '"');  // Replace \" with "
-}
-
 // could've done generic but I'm too lazy
-const convertToSQL = async (filepath: string, callback: (line: string[][]) => void) => {
+const convertToSQL = async (filepath: string, callback: (line: string[][]) => void) =>
+{
     if (extname(filepath) !== ".txt") return;
     console.log("filepath:", filepath);
 
@@ -22,7 +19,7 @@ const convertToSQL = async (filepath: string, callback: (line: string[][]) => vo
         crlfDelay: Infinity,
     });
 
-    // I AM TOO LAZY TO PERFORM BATCH OPERATIONS!
+    // Hey, look! Batch operations!
     const BATCH_SIZE = 5_000;
     let batch: string[][] = [];
     for await (const line of lines) {
@@ -62,11 +59,12 @@ if (existsSync(TEXT_PLAYERS_FOLDER)) {
         console.log(`Loading ${name}...`);
         const p = convertToSQL(
             resolve(TEXT_PLAYERS_FOLDER, file),
-            (batch) => DatabaseInteractions.insertPlayers(db, batch.map(v => {
+            (batch) => DatabaseInteractions.insertPlayers(db, batch.map(v =>
+            {
                 const [playerID, data] = v;
                 return {
                     playerID: playerID!,
-                    data: unslash(data!)
+                    data: data!
                 } as playerDataEntry;
             }))
         );
@@ -84,12 +82,13 @@ if (existsSync(TEXT_SAVES_FOLDER)) {
         const p = convertToSQL(
             resolve(TEXT_SAVES_FOLDER, file),
             (batch) => DatabaseInteractions.insertSave(db,
-                batch.map(v => {
+                batch.map(v =>
+                {
                     const [increment, index, playerID, data] = v;
                     return {
                         playerID: playerID!,
                         index: index!,
-                        data: unslash(data!)
+                        data: data!
                     } as playerSaveEntry;
                 })));
         promises.push(p);
@@ -106,7 +105,3 @@ else {
 
 // http server
 HttpHandler.init(db, "overengineered", 1367);
-
-export const getAllSaves = (db: Database) => {
-    return db.query("SELECT * FROM players").all();
-};
