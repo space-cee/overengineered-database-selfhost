@@ -1,4 +1,4 @@
-import { DatabaseInteractions, type playerDataEntry, type playerSaveEntry } from "./Classes/DatabaseInteractions";
+import { DatabaseInteractions, type DataEntry, type SaveEntry } from "./Classes/DatabaseInteractions";
 import { createReadStream, existsSync, readdirSync, } from "node:fs";
 import { createInterface } from "node:readline";
 import { Database } from "bun:sqlite";
@@ -6,9 +6,11 @@ import { HttpHandler } from "./Classes/HttpHandler";
 import { basename, extname, resolve } from "node:path";
 import { rename } from "node:fs/promises";
 
+// i3ym
+const unslash = (str: string) => str.replaceAll("\\\\", "\\")
+
 // could've done generic but I'm too lazy
-const convertToSQL = async (filepath: string, callback: (line: string[][]) => void) =>
-{
+const convertToSQL = async (filepath: string, callback: (line: string[][]) => void) => {
     if (extname(filepath) !== ".txt") return;
     console.log("filepath:", filepath);
 
@@ -23,7 +25,7 @@ const convertToSQL = async (filepath: string, callback: (line: string[][]) => vo
     const BATCH_SIZE = 5_000;
     let batch: string[][] = [];
     for await (const line of lines) {
-        batch.push(line.split("\t"));
+        batch.push(unslash(line).split("\t"));
         if (batch.length >= BATCH_SIZE) {
             callback(batch);
             batch = [];
@@ -59,13 +61,12 @@ if (existsSync(TEXT_PLAYERS_FOLDER)) {
         console.log(`Loading ${name}...`);
         const p = convertToSQL(
             resolve(TEXT_PLAYERS_FOLDER, file),
-            (batch) => DatabaseInteractions.insertPlayers(db, batch.map(v =>
-            {
+            (batch) => DatabaseInteractions.insertPlayers(db, batch.map(v => {
                 const [playerID, data] = v;
                 return {
                     playerID: playerID!,
                     data: data!
-                } as playerDataEntry;
+                } as DataEntry;
             }))
         );
         promises.push(p);
@@ -82,14 +83,13 @@ if (existsSync(TEXT_SAVES_FOLDER)) {
         const p = convertToSQL(
             resolve(TEXT_SAVES_FOLDER, file),
             (batch) => DatabaseInteractions.insertSave(db,
-                batch.map(v =>
-                {
+                batch.map(v => {
                     const [increment, index, playerID, data] = v;
                     return {
                         playerID: playerID!,
                         index: index!,
                         data: data!
-                    } as playerSaveEntry;
+                    } as SaveEntry;
                 })));
         promises.push(p);
         console.log(`Finished loading ${name} in ${(Date.now() - start) / 1000}s.`);

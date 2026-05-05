@@ -10,7 +10,7 @@ export namespace HttpHandler {
 
         // read player data by id
         app.get(`/${base}/player/:id`, ({ params: { id } }) => {
-            const player = DatabaseInteractions.getPlayerDataEntryByID(db, id);
+            const player = DatabaseInteractions.getDataEntryByID(db, id);
             return player ?? { error: 'Not found' };
         });
 

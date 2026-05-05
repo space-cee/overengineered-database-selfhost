@@ -1,14 +1,21 @@
 import { Database } from "bun:sqlite";
 
-export type playerDataEntry = {
+export type DataEntry = {
     playerID: string,
     data: string,
 }
-export type playerSaveEntry = {
+export type SaveEntry = DataEntry & {
+    index: string
+}
+export type DataResult = {
     playerID: string,
+    data: Array<unknown>,
+}
+export type SaveResult = DataResult & {
     index: string,
-    data: string,
 }
+
+const destringifyData = (entry: DataEntry): DataResult => ({ ...entry, data: JSON.parse(entry.data) })
 
 export namespace DatabaseInteractions {
     /* USERID \t {
@@ -30,7 +37,7 @@ export namespace DatabaseInteractions {
 
     export const insertPlayers = (
         db: Database,
-        playerData: playerDataEntry[]
+        playerData: DataEntry[]
     ) => {
         const prep = db.prepare(`
                 INSERT INTO players (player_id, data) 
@@ -44,11 +51,14 @@ export namespace DatabaseInteractions {
         })(playerData);
     }
 
-    export const getPlayerDataEntryByID = (db: Database, playerID: string): playerDataEntry => db.query(`
-        SELECT * FROM players 
-        WHERE player_id = ? 
-        LIMIT 1
-    `).get(playerID) as playerDataEntry;
+    export const getDataEntryByID = (db: Database, playerID: string): DataResult => destringifyData(
+        db.query(`
+            SELECT * FROM players 
+            WHERE player_id = ? 
+            LIMIT 1
+        `).get(playerID) as DataEntry
+    )
+
 
     // SLOT DATA:
     //  INCREMENT \t INDEX \t USERID \t { "blocks": [ ... ], "version": ## }
@@ -66,7 +76,7 @@ export namespace DatabaseInteractions {
 
     export const insertSave = (
         db: Database,
-        saveData: playerSaveEntry[]
+        saveData: SaveEntry[]
     ) => {
         const prep = db.prepare(`
             INSERT INTO saves (player_id, "index", data) 
@@ -81,16 +91,21 @@ export namespace DatabaseInteractions {
         })(saveData);
     }
 
-    export const getSavesOfPlayerByID = (db: Database, playerID: string): playerSaveEntry[] => db.query(`
-        SELECT * FROM saves
-        WHERE player_id = ?
-        ORDER BY increment DESC
-    `).all(playerID) as playerSaveEntry[];
+    export const getSavesOfPlayerByID = (db: Database, playerID: string): SaveResult[] =>
+        db.query(`
+            SELECT * FROM saves
+            WHERE player_id = ?
+            ORDER BY increment DESC
+        `).all(playerID)
+            .map(entry => destringifyData(entry as SaveEntry) as SaveResult);
 
-    export const getSavesOfPlayerByIDWithIndex = (db: Database, playerID: string, index: string): playerSaveEntry => db.query(`
-        SELECT * FROM saves 
-        WHERE player_id = ? AND "index" = ?
-        ORDER BY increment DESC 
-        LIMIT 1
-    `).get(playerID, index) as playerSaveEntry;
+
+    export const getSavesOfPlayerByIDWithIndex = (db: Database, playerID: string, index: string): SaveResult => destringifyData(
+        db.query(`
+            SELECT * FROM saves 
+            WHERE player_id = ? AND "index" = ?
+            ORDER BY increment DESC 
+            LIMIT 1
+        `).get(playerID, index) as SaveEntry
+    ) as SaveResult
 }
