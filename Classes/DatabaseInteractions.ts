@@ -4,13 +4,16 @@ export type DataEntry = {
     playerID: string,
     data: string,
 }
-export type SaveEntry = DataEntry & {
-    index: string
-}
+
 export type DataResult = {
     playerID: string,
     data: Array<unknown>,
 }
+
+export type SaveEntry = DataEntry & {
+    index: string
+}
+
 export type SaveResult = DataResult & {
     index: string,
 }

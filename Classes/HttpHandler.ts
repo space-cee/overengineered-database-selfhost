@@ -5,7 +5,8 @@ import { write_token } from '../Access Tokens/securityTokens';
 
 
 // AI slop here :)
-function splitUtf8(str: string, maxBytes = 4096) {
+function splitUtf8(str: string, maxBytes = 4096)
+{
     const buffer = Buffer.from(str, 'utf8');
     const chunks = [];
     let offset = 0;
@@ -49,7 +50,8 @@ const cachedSaveData = new Map<
     >
 >();
 
-const findCachedSaveData = (id: playerID, index: slotIndex) => {
+const findCachedSaveData = (id: playerID, index: slotIndex) =>
+{
     const playerCached = cachedSaveData.get(id);
     if (!playerCached) {
         cachedSaveData.set(id, new Map());
@@ -60,7 +62,8 @@ const findCachedSaveData = (id: playerID, index: slotIndex) => {
 };
 
 
-const updateSaveCache = (db: Database, id: playerID, index: slotIndex) => {
+const updateSaveCache = (db: Database, id: playerID, index: slotIndex) =>
+{
     let cachedSave = findCachedSaveData(id, index);
     if (!cachedSave) {
         const gotSave: SaveResult = DatabaseInteractions.getSavesOfPlayerByIDWithIndex(db, id, index);
@@ -83,31 +86,37 @@ const updateSaveCache = (db: Database, id: playerID, index: slotIndex) => {
     return cachedSave;
 }
 
-export namespace HttpHandler {
-    export const init = (db: Database, base: string, port: number) => {
+export namespace HttpHandler
+{
+    export const init = (db: Database, base: string, port: number) =>
+    {
         const app = new Elysia();
         app.listen(port);
 
         // read player data by id
-        app.get(`/${base}/player/:id`, ({ params: { id } }): errcode | DataResult => {
+        app.get(`/${base}/player/:id`, ({ params: { id } }): errcode | DataResult =>
+        {
             const player = DatabaseInteractions.getDataEntryByID(db, id);
             return player ?? { error: 'Not found', err_type: "NOT_FOUND" };
         });
 
         // read all saves by player id
-        app.get(`/${base}/save/:id`, ({ params: { id } }): errcode | { saves: SaveResult[] } => {
+        app.get(`/${base}/save/:id`, ({ params: { id } }): errcode | { saves: SaveResult[] } =>
+        {
             const saves = DatabaseInteractions.getSavesOfPlayerByID(db, id);
             return saves ? ({ saves }) : { error: 'Not found', err_type: "NOT_FOUND" };
         });
 
         // read single save by player id
-        app.get(`/${base}/save/:id/:index`, ({ params: { id, index } }): errcode | string => {
+        app.get(`/${base}/save/:id/:index`, ({ params: { id, index } }): errcode | string =>
+        {
             const save = updateSaveCache(db, id, index);
             return save.data ?? { error: 'Not found', err_type: "NOT_FOUND" };
         });
 
         // read single save by player id by page 
-        app.get(`/${base}/save/:id/:index/:page`, ({ params: { id, index, page } }): errcode | string => {
+        app.get(`/${base}/save/:id/:index/:page`, ({ params: { id, index, page } }): errcode | string =>
+        {
             const pg = Number(page);
             if (isNaN(pg)) return { error: 'No page found', err_type: "NOT_FOUND" };
 
@@ -119,7 +128,8 @@ export namespace HttpHandler {
         });
 
         // write player
-        app.post(`/${base}/player`, ({ body }): errcode => {
+        app.post(`/${base}/player`, ({ body }): errcode =>
+        {
             if (body.token !== write_token) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
             DatabaseInteractions.insertPlayers(db, [body]);
             return { status: 'ok' };
@@ -132,7 +142,8 @@ export namespace HttpHandler {
         });
 
         // write save (I'm not doing batches)
-        app.post(`/${base}/save`, ({ body }): errcode => {
+        app.post(`/${base}/save`, ({ body }): errcode =>
+        {
             if (body.token !== write_token) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
             DatabaseInteractions.insertSave(db, [body]);
 
@@ -153,6 +164,21 @@ export namespace HttpHandler {
                 playerID: t.String(),
                 index: t.String(),
                 data: t.String(),
+                token: t.String(),
+            })
+        });
+
+        // replace saves of one person with saves of another person
+        app.post(`/${base}/migrate`, ({ body }): errcode =>
+        {
+            if (body.token !== write_token) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
+            const allSaves = DatabaseInteractions.getSavesOfPlayerByID(db, body.fromID);
+            DatabaseInteractions.insertSave(db, allSaves.map(v => ({ ...v, data: JSON.stringify(v.data) })));
+            return { status: 'ok' };
+        }, {
+            body: t.Object({
+                fromID: t.String(),
+                toID: t.String(),
                 token: t.String(),
             })
         });
