@@ -141,6 +141,18 @@ export namespace HttpHandler
         {
             if (body.token !== write_token) return { error: "incorrect token" };
             DatabaseInteractions.insertSave(db, [body]);
+
+            const saveForCache = {
+                data: body.data,
+                slicedData: splitUtf8(body.data, 1_000_000)
+            };
+            cachedSaveData.get(body.playerID)?.set(body.index, saveForCache);
+            // remove that from the cache after 30 mins
+            setTimeout(
+                () => cachedSaveData.get(body.playerID)?.delete(body.index),
+                30 * 60 * 1_000
+            );
+
             return { status: 'ok' };
         }, {
             body: t.Object({
