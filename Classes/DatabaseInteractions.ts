@@ -76,8 +76,6 @@ export namespace DatabaseInteractions {
     // SLOT DATA:
     //  INCREMENT \t INDEX \t USERID \t { "blocks": [ ... ], "version": ## }
     export const initSavesTable = (db: Database) => {
-        // I'm not sure here vvvvvvvvvvvv
-        // there is no collision if playerID+index are not unique
         db.run(`
             CREATE TABLE IF NOT EXISTS saves (
             increment INTEGER PRIMARY KEY AUTOINCREMENT,
