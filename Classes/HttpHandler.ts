@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { DatabaseInteractions, type DataResult, type SaveEntry, type SaveResult } from './DatabaseInteractions';
+import { DatabaseInteractions, type DataEntry, type DataResult, type SaveEntry, type SaveResult } from './DatabaseInteractions';
 import { Database } from "bun:sqlite";
 import { write_token } from '../Access Tokens/securityTokens';
 
@@ -37,6 +37,7 @@ type playerID = string;
 type slotIndex = string;
 type errType = "OUT_OF_INDEX" | "NOT_FOUND" | "INCORRECT_TOKEN";
 type errcode = { error: string, err_type: errType } | { status: string };
+type MigrationResult = { error: string, err_type: errType } | { metadata: string, saves: string }
 type preparedCachedSaveData = {
     data: string,
     slicedData: string[]
@@ -161,13 +162,23 @@ export namespace HttpHandler {
         });
 
         // copies saves of one person to saves of another person
-        app.post(`/${base}/migrate`, ({ body }): errcode => {
+        app.post(`/${base}/migrate`, ({ body }): MigrationResult => {
             if (body.token !== write_token) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
+
+            // Migrate metadata
+            const metadata = DatabaseInteractions.getDataEntryByID(db, body.fromID)
+            if (!metadata) return { error: `No meta data from PlayerID ${body.fromID} was found`, err_type: "NOT_FOUND" }
+            const newdata = { ...metadata, playerID: body.toID, data: JSON.stringify(metadata!.data) } as DataEntry
+
+            // Migrate saves
             const allSaves = DatabaseInteractions.getSavesOfPlayerByID(db, body.fromID);
-            if (!allSaves) return { error: `No save data from PlayerID ${body.fromID} was found`, err_type: "NOT_FOUND" };
+            if (!allSaves) return { error: `No save data from PlayerID ${body.fromID} was found`, err_type: "NOT_FOUND" }
             const migratedData: SaveEntry[] = allSaves.map(v => (({ ...v, playerID: body.toID, data: JSON.stringify(v!.data) })));
-            DatabaseInteractions.insertSave(db, migratedData);
-            return { status: 'ok' };
+
+            return {
+                metadata: DatabaseInteractions.insertPlayers(db, [newdata]),
+                saves: DatabaseInteractions.insertSave(db, migratedData)
+            };
         }, {
             body: t.Object({
                 fromID: t.String(),

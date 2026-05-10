@@ -18,6 +18,8 @@ export type SaveResult = DataResult & {
     index: string,
 }
 
+export type InteractionResult = "SUCCESS" | "FAIL"
+
 const destringifyData = (entry: DataEntry | undefined): DataResult | undefined => {
     if (!entry) return undefined
     return ({ ...entry, data: JSON.parse(entry.data) })
@@ -44,17 +46,22 @@ export namespace DatabaseInteractions {
     export const insertPlayers = (
         db: Database,
         playerData: DataEntry[]
-    ) => {
-        const prep = db.prepare(`
+    ): InteractionResult => {
+        try {
+            const prep = db.prepare(`
                 INSERT INTO players (playerID, data) 
                 VALUES ($player, $data)
                 ON CONFLICT(playerID) DO UPDATE SET data = excluded.data
         `);
-        db.transaction((data) => {
-            for (const d of data) {
-                prep.run({ $player: d.playerID, $data: d.data });
-            }
-        })(playerData);
+            db.transaction((data) => {
+                for (const d of data) {
+                    prep.run({ $player: d.playerID, $data: d.data });
+                }
+            })(playerData);
+        } catch {
+            return "FAIL"
+        }
+        return "SUCCESS"
     }
 
     export const getDataEntryByID = (db: Database, playerID: string): DataResult | undefined => destringifyData(
@@ -85,18 +92,23 @@ export namespace DatabaseInteractions {
     export const insertSave = (
         db: Database,
         saveData: SaveEntry[]
-    ) => {
-        const prep = db.prepare(`
+    ): InteractionResult => {
+        try {
+            const prep = db.prepare(`
             INSERT INTO saves (playerID, "index", data) 
             VALUES ($player, $index, $data)
             ON CONFLICT(playerID, "index") DO UPDATE SET data = excluded.data
         `);
 
-        db.transaction((data: typeof saveData) => {
-            for (const d of data) {
-                prep.run({ $player: d.playerID, $index: d.index, $data: d.data });
-            }
-        })(saveData);
+            db.transaction((data: typeof saveData) => {
+                for (const d of data) {
+                    prep.run({ $player: d.playerID, $index: d.index, $data: d.data });
+                }
+            })(saveData);
+        } catch {
+            return "FAIL"
+        }
+        return "SUCCESS"
     }
 
     export const getSavesOfPlayerByID = (db: Database, playerID: string): SaveResult[] | undefined =>
