@@ -1,10 +1,35 @@
 import { DatabaseInteractions, type DataEntry, type SaveEntry } from "./Classes/DatabaseInteractions";
-import { createReadStream, existsSync, readdirSync, } from "node:fs";
+import { createReadStream, existsSync, readdirSync, readFileSync, } from "node:fs";
 import { createInterface } from "node:readline";
 import { Database } from "bun:sqlite";
 import { HttpHandler } from "./Classes/HttpHandler";
 import { basename, extname, resolve } from "node:path";
 import { rename } from "node:fs/promises";
+
+// export db write token
+const tokenFile = Bun.file("./Access Tokens/WRITE_TOKEN");
+const placeholder = "REPLACE THIS TEXT WITH YOUR TOKEN OR PASSWORD (BETTER USE TOKENS)";
+
+let isUsingPlaceholderToken: boolean;
+let WRITE_TOKEN: string;
+try {
+    WRITE_TOKEN = await tokenFile.text();
+    isUsingPlaceholderToken = WRITE_TOKEN.trim() === placeholder.trim();
+    if (isUsingPlaceholderToken)
+        console.warn("You're still using the placeholder token! Replace it immediatley!");
+    else
+        console.log("Token found.");
+} catch (err: any) {
+    if (err.code !== "ENOENT") throw err;
+
+    // NOT tokenFile.write because it WILL THROW EXCEPTION IF FOLDERS DO NOT EXIST!!
+    await Bun.write(tokenFile, placeholder);
+    WRITE_TOKEN = placeholder;
+
+    console.log("New token file was generated! Replace placeholder with your own token!");
+    isUsingPlaceholderToken = true;
+}
+export { WRITE_TOKEN, isUsingPlaceholderToken };
 
 // i3ym
 const unslash = (str: string) => str.replaceAll("\\\\", "\\")

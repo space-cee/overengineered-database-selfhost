@@ -37,3 +37,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 db_files/*.sqlite
 db_files/*.sqlite-shm
 db_files/*.sqlite-wal
+
+# tokens
+Access Tokens/*

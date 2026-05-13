@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { DatabaseInteractions, type DataEntry, type DataResult, type SaveEntry, type SaveResult } from './DatabaseInteractions';
 import { Database } from "bun:sqlite";
-import { write_token } from '../Access Tokens/securityTokens';
+import { isUsingPlaceholderToken, WRITE_TOKEN } from '..';
 
 
 // AI slop here :)
@@ -136,7 +136,8 @@ export namespace HttpHandler
         // write player
         app.post(`/${base}/player`, ({ body }): errcode =>
         {
-            if (body.token !== write_token) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
+            if (isUsingPlaceholderToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
+            if (body.token !== WRITE_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
             DatabaseInteractions.insertPlayers(db, [body]);
             return { status: 'ok' };
         }, {
@@ -150,7 +151,8 @@ export namespace HttpHandler
         // write save (I'm not doing batches)
         app.post(`/${base}/save`, ({ body }): errcode =>
         {
-            if (body.token !== write_token) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
+            if (isUsingPlaceholderToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
+            if (body.token !== WRITE_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
             DatabaseInteractions.insertSave(db, [body]);
 
             const saveForCache = {
@@ -177,7 +179,8 @@ export namespace HttpHandler
         // copies saves of one person to saves of another person
         app.post(`/${base}/migrate`, ({ body }): MigrationResult =>
         {
-            if (body.token !== write_token) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
+            if (isUsingPlaceholderToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
+            if (body.token !== WRITE_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
 
             // Migrate metadata
             const metadata = DatabaseInteractions.getDataEntryByID(db, body.fromID)
