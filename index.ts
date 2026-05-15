@@ -13,8 +13,8 @@ const placeholder = "REPLACE THIS TEXT WITH YOUR TOKEN OR PASSWORD (BETTER USE T
 let isUsingPlaceholderToken: boolean;
 let WRITE_TOKEN: string;
 try {
-    WRITE_TOKEN = await tokenFile.text();
-    isUsingPlaceholderToken = WRITE_TOKEN.trim() === placeholder.trim();
+    WRITE_TOKEN = (await tokenFile.text()).trim();
+    isUsingPlaceholderToken = WRITE_TOKEN === placeholder.trim();
     if (isUsingPlaceholderToken)
         console.warn("You're still using the placeholder token! Replace it immediatley or you won't be able to write any data!");
     else
@@ -35,8 +35,7 @@ export { WRITE_TOKEN, isUsingPlaceholderToken };
 const unslash = (str: string) => str.replaceAll("\\\\", "\\")
 
 // could've done generic but I'm too lazy
-const convertToSQL = async (filepath: string, callback: (line: string[][]) => void) =>
-{
+const convertToSQL = async (filepath: string, callback: (line: string[][]) => void) => {
     if (extname(filepath) !== ".txt") return;
     console.log("filepath:", filepath);
 
@@ -87,8 +86,7 @@ if (existsSync(TEXT_PLAYERS_FOLDER)) {
         console.log(`Loading ${name}...`);
         const p = convertToSQL(
             resolve(TEXT_PLAYERS_FOLDER, file),
-            (batch) => DatabaseInteractions.insertPlayers(db, batch.map(v =>
-            {
+            (batch) => DatabaseInteractions.insertPlayers(db, batch.map(v => {
                 const [playerID, data] = v;
                 return {
                     playerID: playerID!,
@@ -110,8 +108,7 @@ if (existsSync(TEXT_SAVES_FOLDER)) {
         const p = convertToSQL(
             resolve(TEXT_SAVES_FOLDER, file),
             (batch) => DatabaseInteractions.insertSave(db,
-                batch.map(v =>
-                {
+                batch.map(v => {
                     const [increment, index, playerID, data] = v;
                     return {
                         playerID: playerID!,
