@@ -1,7 +1,8 @@
 import { Elysia, t } from 'elysia';
 import { DatabaseInteractions, type DataEntry, type DataResult, type SaveEntry, type SaveResult } from './DatabaseInteractions';
 import { Database } from "bun:sqlite";
-import { isUsingPlaceholderWriteToken, logMigration, WRITE_TOKEN } from '..';
+import { ADMIN_TOKEN, isUsingPlaceholderAdminToken, isUsingPlaceholderWriteToken, logMigration, WRITE_TOKEN } from '..';
+import { GameEventsHandler } from './GameEventsHandler';
 
 
 // AI slop here :)
@@ -132,6 +133,28 @@ export namespace HttpHandler
                 { error: 'Page out of index', err_type: "OUT_OF_INDEX" } :
                 save?.slicedData[pg] ?? { error: 'Not found', err_type: "NOT_FOUND" };
         });
+
+        //get events
+        app.get(`/${base}/events`, ({ query }) =>
+            GameEventsHandler.getEventsAfterTimestamp(query.time), {
+            query: t.Object({
+                time: t.Number()
+            })
+        });
+
+        //get events
+        app.post(`/${base}/events`, ({ body }) =>
+        {
+            if (isUsingPlaceholderAdminToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
+            if (body.token !== ADMIN_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
+            GameEventsHandler.addEvent(body.data);
+        },
+            {
+                body: t.Object({
+                    data: t.Any(),
+                    token: t.String()
+                })
+            });
 
         // write player
         app.post(`/${base}/player`, ({ body }): errcode =>
