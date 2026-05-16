@@ -136,11 +136,12 @@ export namespace HttpHandler
 
         //get events
         app.get(`/${base}/events`, ({ query }) =>
-            GameEventsHandler.getEventsAfterTimestamp(query.time), {
-            query: t.Object({
-                time: t.Number()
-            })
-        });
+            GameEventsHandler.getEventsAfterTimestamp(query.time),
+            {
+                query: t.Object({
+                    time: t.Number()
+                })
+            });
 
         //get events
         app.post(`/${base}/events`, ({ body }) =>
@@ -148,6 +149,7 @@ export namespace HttpHandler
             if (isUsingPlaceholderAdminToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
             if (body.token !== ADMIN_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
             GameEventsHandler.addEvent(body.data);
+            return { status: "ok" };
         },
             {
                 body: t.Object({
