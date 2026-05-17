@@ -5,7 +5,7 @@
 2. Clone this repo
 3. cd to the repo
 4. Run `bun install`
-5. Replace token in `Access Tokens/securityTokens.ts` with your token (it is advised to use actual tokens)
+5. Replace tokens in `Access Tokens` folder after they get generated for the first time with your tokens (it is advised to use actual tokens)
 
 ### Importing old saves:
 1. Obtain the saves from discord (https://discord.com/channels/1053774759244083280/1232242940391329793/1486703044094595072)
