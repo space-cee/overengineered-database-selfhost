@@ -4,7 +4,7 @@ import { ADMIN_TOKEN, isUsingPlaceholderAdminToken, isUsingPlaceholderWriteToken
 import { GameEventsHandler } from './GameEventsHandler';
 import { DatabaseInteractions, type SavedPlayerFormat, type ParsedSlotFormatWithIndex, type ParsedSlotFormat } from './DatabaseInteractions';
 
-export type ErrorType = "OUT_OF_INDEX" | "NOT_FOUND" | "INCORRECT_TOKEN";
+export type ErrorType = "OUT_OF_INDEX" | "NOT_FOUND" | "INCORRECT_TOKEN" | "INSERT_FAIL";
 type ErrorCode = { error: string, err_type: ErrorType } | { status: string };
 type MigrationResult = { error: string, err_type: ErrorType } | { metadata: string, saves: string }
 
@@ -158,12 +158,13 @@ export namespace HttpHandler
         {
             if (isUsingPlaceholderWriteToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
             if (body.token !== WRITE_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
-            DatabaseInteractions.insertPlayers(db, [body]);
-            return { status: 'ok' };
+            return DatabaseInteractions.insertPlayers(db, [body]) === "SUCCESS"
+                ? { status: 'ok' }
+                : { error: "Error while upserting player metadata", err_type: "INSERT_FAIL" };
         }, {
             body: t.Object({
                 playerID: t.String(),
-                data: t.Object(t.Unknown()),
+                data: t.Record(t.String(), t.Any()),
                 token: t.String(),
             })
         });
@@ -171,9 +172,11 @@ export namespace HttpHandler
         // write save (I'm not doing batches)
         app.post(`/${base}/save`, ({ body }): ErrorCode =>
         {
+            console.log(body);
             if (isUsingPlaceholderWriteToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
             if (body.token !== WRITE_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
-            DatabaseInteractions.insertSave(db, [body]);
+            const insertResult = DatabaseInteractions.insertSave(db, [body]);
+            if (insertResult === "FAIL") return { error: "Error while upserting save data", err_type: "INSERT_FAIL" };
 
             // clear cache
             const oldSave = cachedSaveData.get(body.playerID)?.get(body.index);
@@ -199,7 +202,7 @@ export namespace HttpHandler
             body: t.Object({
                 playerID: t.String(),
                 index: t.String(),
-                data: t.Object(t.Unknown()),
+                data: t.Record(t.String(), t.Any()),
                 token: t.String(),
             })
         });

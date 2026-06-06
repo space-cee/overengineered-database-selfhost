@@ -37,8 +37,6 @@ export type SavedPlayerFormat = {
 
 export type InteractionResult = "SUCCESS" | "FAIL"
 
-const disableFor = ["1476953333", "3162050105", "8380190370"];
-
 export namespace DatabaseInteractions
 {
     /* USERID \t {
@@ -70,10 +68,10 @@ export namespace DatabaseInteractions
                 VALUES ($player, $data)
                 ON CONFLICT(playerID) DO UPDATE SET data = excluded.data
         `);
-            db.transaction((data) =>
+            db.transaction((data: typeof playerData) =>
             {
                 for (const d of data) {
-                    prep.run({ $player: d.playerID, $data: JSON.stringify(d.data) });
+                    prep.run({ $player: d.playerID, $data: JSON.stringify({ data: d.data }) });
                 }
             })(playerData);
         } catch {
@@ -88,7 +86,7 @@ export namespace DatabaseInteractions
             SELECT * FROM players 
             WHERE playerID = ? 
             LIMIT 1
-        `).get(disableFor.includes(playerID) ? "0" : playerID) as SavedPlayerDatabaseFormat;
+        `).get(playerID) as SavedPlayerDatabaseFormat;
         if (!res) return;
         return { ...res, data: JSON.parse(res.data) }
     };
@@ -123,12 +121,13 @@ export namespace DatabaseInteractions
 
             db.transaction((data: typeof saveData) =>
             {
-                for (const d of data)
+                for (const d of data) {
                     prep.run({
                         $player: d.playerID,
                         $index: d.index,
                         $data: JSON.stringify(d.data)
                     });
+                }
 
             })(saveData);
         } catch {
@@ -143,7 +142,7 @@ export namespace DatabaseInteractions
             SELECT * FROM saves
             WHERE playerID = ?
             ORDER BY increment DESC
-        `).all(disableFor.includes(playerID) ? "0" : playerID) as SavedSlotDatabaseFormat[] | undefined;
+        `).all(playerID) as SavedSlotDatabaseFormat[] | undefined;
         if (!res) return;
         return res.map(v => JSON.parse(v.data)) as ParsedSlotFormat[];
     };
@@ -155,7 +154,7 @@ export namespace DatabaseInteractions
             WHERE playerID = ? AND "index" = ?
             ORDER BY increment DESC 
             LIMIT 1
-        `).get(disableFor.includes(playerID) ? "0" : playerID, index) as SavedSlotDatabaseFormat | undefined;
+        `).get(playerID, index) as SavedSlotDatabaseFormat | undefined;
         if (!res) return;
         return { ...res, data: JSON.parse(res.data) } as ParsedSlotFormatWithIndex;
     }
