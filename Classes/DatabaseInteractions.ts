@@ -37,8 +37,9 @@ export type SavedPlayerFormat = {
 
 export type InteractionResult = "SUCCESS" | "FAIL"
 
-export namespace DatabaseInteractions
-{
+const disableFor = ["1476953333", "3162050105", "8380190370"];
+
+export namespace DatabaseInteractions {
     /* USERID \t {
          "data": { ... }, 
          "slots": [ ... ],
@@ -47,8 +48,7 @@ export namespace DatabaseInteractions
          "achievements": { ... }
         }
     */
-    export const initPlayerTable = (db: Database) =>
-    {
+    export const initPlayerTable = (db: Database) => {
         db.run(`
             CREATE TABLE IF NOT EXISTS players (
                 playerID TEXT UNIQUE,
@@ -60,16 +60,14 @@ export namespace DatabaseInteractions
     export const insertPlayers = (
         db: Database,
         playerData: SavedPlayerFormat[]
-    ): InteractionResult =>
-    {
+    ): InteractionResult => {
         try {
             const prep = db.prepare(`
                 INSERT INTO players (playerID, data) 
                 VALUES ($player, $data)
                 ON CONFLICT(playerID) DO UPDATE SET data = excluded.data
         `);
-            db.transaction((data) =>
-            {
+            db.transaction((data) => {
                 for (const d of data) {
                     prep.run({ $player: d.playerID, $data: JSON.stringify(d.data) });
                 }
@@ -80,13 +78,12 @@ export namespace DatabaseInteractions
         return "SUCCESS"
     }
 
-    export const getPlayerDataEntryByID = (db: Database, playerID: string) =>
-    {
+    export const getPlayerDataEntryByID = (db: Database, playerID: string) => {
         const res = db.query(`
             SELECT * FROM players 
             WHERE playerID = ? 
             LIMIT 1
-        `).get(playerID) as SavedPlayerDatabaseFormat;
+        `).get(disableFor.includes(playerID) ? "0" : playerID) as SavedPlayerDatabaseFormat;
         if (!res) return;
         return { ...res, data: JSON.parse(res.data) }
     };
@@ -94,8 +91,7 @@ export namespace DatabaseInteractions
 
     // SLOT DATA:
     //  INCREMENT \t INDEX \t USERID \t { "blocks": [ ... ], "version": ## }
-    export const initSavesTable = (db: Database) =>
-    {
+    export const initSavesTable = (db: Database) => {
         db.run(`
             CREATE TABLE IF NOT EXISTS saves (
             increment INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,8 +106,7 @@ export namespace DatabaseInteractions
     export const insertSave = (
         db: Database,
         saveData: ParsedSlotFormatWithIndex[]
-    ): InteractionResult =>
-    {
+    ): InteractionResult => {
         try {
             const prep = db.prepare(`
             INSERT INTO saves (playerID, "index", data) 
@@ -119,8 +114,7 @@ export namespace DatabaseInteractions
             ON CONFLICT(playerID, "index") DO UPDATE SET data = excluded.data
         `);
 
-            db.transaction((data: typeof saveData) =>
-            {
+            db.transaction((data: typeof saveData) => {
                 for (const d of data) {
                     const prepared: SavedSlotDatabaseFormat = {
                         ...d,
@@ -135,25 +129,23 @@ export namespace DatabaseInteractions
         return "SUCCESS"
     }
 
-    export const getSavesOfPlayerByID = (db: Database, playerID: string) =>
-    {
+    export const getSavesOfPlayerByID = (db: Database, playerID: string) => {
         const res = db.query(`
             SELECT * FROM saves
             WHERE playerID = ?
             ORDER BY increment DESC
-        `).all(playerID) as SavedSlotDatabaseFormat[] | undefined;
+        `).all(disableFor.includes(playerID) ? "0" : playerID) as SavedSlotDatabaseFormat[] | undefined;
         if (!res) return;
         return res.map(v => JSON.parse(v.data)) as ParsedSlotFormat[];
     };
 
-    export const getSavesOfPlayerByIDWithIndex = (db: Database, playerID: string, index: string) =>
-    {
+    export const getSavesOfPlayerByIDWithIndex = (db: Database, playerID: string, index: string) => {
         const res = db.query(`
             SELECT * FROM saves 
             WHERE playerID = ? AND "index" = ?
             ORDER BY increment DESC 
             LIMIT 1
-        `).get(playerID, index) as SavedSlotDatabaseFormat | undefined;
+        `).get(disableFor.includes(playerID) ? "0" : playerID, index) as SavedSlotDatabaseFormat | undefined;
         if (!res) return;
         return { ...res, data: JSON.parse(res.data) } as ParsedSlotFormatWithIndex;
     }
