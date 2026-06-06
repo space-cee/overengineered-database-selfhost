@@ -158,6 +158,7 @@ export namespace HttpHandler
         {
             if (isUsingPlaceholderWriteToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
             if (body.token !== WRITE_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
+            if (!Object.keys(body.data).length) return { error: "Incorrect body data type", err_type: "INSERT_FAIL" };
             return DatabaseInteractions.insertPlayers(db, [body]) === "SUCCESS"
                 ? { status: 'ok' }
                 : { error: "Error while upserting player metadata", err_type: "INSERT_FAIL" };
@@ -174,6 +175,8 @@ export namespace HttpHandler
         {
             if (isUsingPlaceholderWriteToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
             if (body.token !== WRITE_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
+            if (!Object.keys(body.data).length) return { error: "Incorrect body data type", err_type: "INSERT_FAIL" };
+
             const insertResult = DatabaseInteractions.insertSave(db, [body]);
             if (insertResult === "FAIL") return { error: "Error while upserting save data", err_type: "INSERT_FAIL" };
 
