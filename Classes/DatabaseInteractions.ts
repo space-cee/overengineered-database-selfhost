@@ -37,8 +37,7 @@ export type SavedPlayerFormat = {
 
 export type InteractionResult = "SUCCESS" | "FAIL"
 
-export namespace DatabaseInteractions
-{
+export namespace DatabaseInteractions {
     /* USERID \t {
          "data": { ... }, 
          "slots": [ ... ],
@@ -47,8 +46,7 @@ export namespace DatabaseInteractions
          "achievements": { ... }
         }
     */
-    export const initPlayerTable = (db: Database) =>
-    {
+    export const initPlayerTable = (db: Database) => {
         db.run(`
             CREATE TABLE IF NOT EXISTS players (
                 playerID TEXT UNIQUE,
@@ -60,18 +58,16 @@ export namespace DatabaseInteractions
     export const insertPlayers = (
         db: Database,
         playerData: SavedPlayerFormat[]
-    ): InteractionResult =>
-    {
+    ): InteractionResult => {
         try {
             const prep = db.prepare(`
                 INSERT INTO players (playerID, data) 
                 VALUES ($player, $data)
                 ON CONFLICT(playerID) DO UPDATE SET data = excluded.data
         `);
-            db.transaction((data: typeof playerData) =>
-            {
+            db.transaction((data: typeof playerData) => {
                 for (const d of data) {
-                    prep.run({ $player: d.playerID, $data: JSON.stringify({ data: d.data }) });
+                    prep.run({ $player: d.playerID, $data: JSON.stringify(d.data) });
                 }
             })(playerData);
         } catch {
@@ -80,8 +76,7 @@ export namespace DatabaseInteractions
         return "SUCCESS"
     }
 
-    export const getPlayerDataEntryByID = (db: Database, playerID: string) =>
-    {
+    export const getPlayerDataEntryByID = (db: Database, playerID: string) => {
         const res = db.query(`
             SELECT * FROM players 
             WHERE playerID = ? 
@@ -94,8 +89,7 @@ export namespace DatabaseInteractions
 
     // SLOT DATA:
     //  INCREMENT \t INDEX \t USERID \t { "blocks": [ ... ], "version": ## }
-    export const initSavesTable = (db: Database) =>
-    {
+    export const initSavesTable = (db: Database) => {
         db.run(`
             CREATE TABLE IF NOT EXISTS saves (
             increment INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,8 +104,7 @@ export namespace DatabaseInteractions
     export const insertSave = (
         db: Database,
         saveData: ParsedSlotFormatWithIndex[]
-    ): InteractionResult =>
-    {
+    ): InteractionResult => {
         try {
             const prep = db.prepare(`
             INSERT INTO saves (playerID, "index", data) 
@@ -119,8 +112,7 @@ export namespace DatabaseInteractions
             ON CONFLICT(playerID, "index") DO UPDATE SET data = excluded.data
         `);
 
-            db.transaction((data: typeof saveData) =>
-            {
+            db.transaction((data: typeof saveData) => {
                 for (const d of data) {
                     prep.run({
                         $player: d.playerID,
@@ -136,8 +128,7 @@ export namespace DatabaseInteractions
         return "SUCCESS"
     }
 
-    export const getSavesOfPlayerByID = (db: Database, playerID: string) =>
-    {
+    export const getSavesOfPlayerByID = (db: Database, playerID: string) => {
         const res = db.query(`
             SELECT * FROM saves
             WHERE playerID = ?
@@ -147,8 +138,7 @@ export namespace DatabaseInteractions
         return res.map(v => JSON.parse(v.data)) as ParsedSlotFormat[];
     };
 
-    export const getSavesOfPlayerByIDWithIndex = (db: Database, playerID: string, index: string) =>
-    {
+    export const getSavesOfPlayerByIDWithIndex = (db: Database, playerID: string, index: string) => {
         const res = db.query(`
             SELECT * FROM saves 
             WHERE playerID = ? AND "index" = ?
