@@ -24,6 +24,12 @@ export type SavedSlotDatabaseFormat = {
     data: string
 }
 
+
+export type SavedPlayerDatabaseFormat = {
+    playerID: string,
+    data: string
+}
+
 export type SavedPlayerFormat = {
     playerID: string,
     data: { [key: string]: any }
@@ -65,7 +71,7 @@ export namespace DatabaseInteractions
             db.transaction((data) =>
             {
                 for (const d of data) {
-                    prep.run({ $player: d.playerID, $data: d.data });
+                    prep.run({ $player: d.playerID, $data: JSON.stringify(d.data) });
                 }
             })(playerData);
         } catch {
@@ -75,11 +81,15 @@ export namespace DatabaseInteractions
     }
 
     export const getPlayerDataEntryByID = (db: Database, playerID: string) =>
-        db.query(`
+    {
+        const res = db.query(`
             SELECT * FROM players 
             WHERE playerID = ? 
             LIMIT 1
-        `).get(playerID) as SavedPlayerFormat;
+        `).get(playerID) as SavedPlayerDatabaseFormat;
+        if (!res) return;
+        return { ...res, data: JSON.parse(res.data) }
+    };
 
 
     // SLOT DATA:

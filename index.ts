@@ -25,7 +25,6 @@ function destringifyData(entry: (UnparsedCommonData | UnparsedCommonDataWithInde
     if (!entry) return undefined;
     let data = entry.data;
     while (typeof data === "string") data = JSON.parse(data);
-    console.warn(typeof data);
     return { ...entry, data };
 }
 
