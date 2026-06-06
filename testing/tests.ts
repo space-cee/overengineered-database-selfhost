@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, test } from "bun:test";
-import type { errType } from "../Classes/HttpHandler";
 import { WRITE_TOKEN } from "..";
+import type { ErrorType } from "../Classes/HttpHandler";
 
 const playerID = "238427763";
 const slotIndex = "31";
@@ -50,7 +50,7 @@ test("retrieve single player save page by page", async () =>
         let err;
         const text = await d.text();
         try {
-            const j = JSON.parse(text) as { error: string, err_type: errType };
+            const j = JSON.parse(text) as { error: string, err_type: ErrorType };
             if (j.err_type) {
                 if (j.err_type === "OUT_OF_INDEX") break;
                 err = `Got unexpected error: ${j}`;
