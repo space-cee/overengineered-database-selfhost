@@ -172,7 +172,6 @@ export namespace HttpHandler
         // write save (I'm not doing batches)
         app.post(`/${base}/save`, ({ body }): ErrorCode =>
         {
-            console.log(body);
             if (isUsingPlaceholderWriteToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
             if (body.token !== WRITE_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
             const insertResult = DatabaseInteractions.insertSave(db, [body]);
