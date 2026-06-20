@@ -155,3 +155,52 @@ test("migrate copies player saves WITH their index", async () =>
 
     console.log(`Migration ${fromID} -> ${toID} verified: save index ${slotIndex} copied with matching data.`);
 });
+
+
+test("write player metadata round-trips", async () =>
+{
+    const B = "http://localhost:1367/overengineered";
+    const id = `wtest_${Date.now()}`;
+    const data = { seen1: true, marker: `m_${Date.now()}` };
+
+    // write
+    const res = await (await fetch(`${B}/player`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerID: id, data, token: WRITE_TOKEN }),
+    })).json();
+    if (res.status !== "ok") throw `Player write did not return ok: ${JSON.stringify(res)}`;
+
+    // read back
+    const back = await (await fetch(`${B}/player/${id}`)).json();
+    if (back.error) throw `Could not read back written player: ${JSON.stringify(back)}`;
+    if (JSON.stringify(back.data) !== JSON.stringify(data))
+        throw `Read-back player data differs.\n wrote: ${JSON.stringify(data)}\n read:  ${JSON.stringify(back.data)}`;
+
+    console.log(`Player write verified for ${id}.`);
+});
+
+
+test("write save data round-trips", async () =>
+{
+    const B = "http://localhost:1367/overengineered";
+    const id = `wtest_${Date.now()}`;
+    const index = "7";
+    const data = { blocks: [{ id: "test", marker: `m_${Date.now()}` }], version: 1 };
+
+    // write
+    const res = await (await fetch(`${B}/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerID: id, index, data, token: WRITE_TOKEN }),
+    })).json();
+    if (res.status !== "ok") throw `Save write did not return ok: ${JSON.stringify(res)}`;
+
+    // read back the single save (GET returns the inner data object directly)
+    const back = await (await fetch(`${B}/save/${id}/${index}`)).json();
+    if (back.error) throw `Could not read back written save: ${JSON.stringify(back)}`;
+    if (JSON.stringify(back) !== JSON.stringify(data))
+        throw `Read-back save data differs.\n wrote: ${JSON.stringify(data)}\n read:  ${JSON.stringify(back)}`;
+
+    console.log(`Save write verified for ${id}/${index}.`);
+});
