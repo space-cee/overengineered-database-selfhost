@@ -21,7 +21,7 @@ const cachedSaveData = new Map<
 >();
 
 // AI slop here :)
-function splitUtf8(str: string, maxBytes = 4096) 
+function splitUtf8(str: string, maxBytes = 4096)
 {
     const buffer = Buffer.from(str, 'utf8');
     const chunks = [];
@@ -50,7 +50,7 @@ function splitUtf8(str: string, maxBytes = 4096)
     return chunks;
 }
 
-const findCachedSaveData = (id: PlayerID, index: SlotIndex) => 
+const findCachedSaveData = (id: PlayerID, index: SlotIndex) =>
     {
     const playerCached = cachedSaveData.get(id);
     if (!playerCached) {
@@ -65,8 +65,8 @@ const findCachedSaveData = (id: PlayerID, index: SlotIndex) =>
 // for test only
 const DISABLE_CACHE = false;
 
-const updateSaveCache = (db: Database, id: PlayerID, index: SlotIndex): PreparedCachedSaveData | undefined => 
-    {
+const updateSaveCache = (db: Database, id: PlayerID, index: SlotIndex): PreparedCachedSaveData | undefined =>
+{
     if (DISABLE_CACHE) {
         const gotSave = DatabaseInteractions.getSavesOfPlayerByIDWithIndex(db, id, index);
         if (!gotSave) return;
@@ -94,7 +94,7 @@ const updateSaveCache = (db: Database, id: PlayerID, index: SlotIndex): Prepared
     return cachedSave;
 }
 
-export namespace HttpHandler 
+export namespace HttpHandler
 {
     export const init = (db: Database, base: string, port: number) => 
         {
@@ -102,22 +102,22 @@ export namespace HttpHandler
         app.listen(port);
 
         // read player data by id
-        app.get(`/${base}/player/:id`, ({ params: { id } }): ErrorCode | SavedPlayerFormat => 
-            {
+        app.get(`/${base}/player/:id`, ({ params: { id } }): ErrorCode | SavedPlayerFormat =>
+        {
             const player = DatabaseInteractions.getPlayerDataEntryByID(db, id);
             return player ?? { error: 'Not found', err_type: "NOT_FOUND" };
         });
 
         // read all saves by player id
-        app.get(`/${base}/save/:id`, ({ params: { id } }): ErrorCode | { saves: ParsedSlotFormat["data"][] } => 
-            {
+        app.get(`/${base}/save/:id`, ({ params: { id } }): ErrorCode | { saves: ParsedSlotFormat["data"][] } =>
+        {
             const saves = DatabaseInteractions.getSavesOfPlayerByID(db, id);
             return saves ? { saves: saves.map(s => s.data) } : { error: 'Not found', err_type: "NOT_FOUND" };
         });
 
         // read single save by player id
-        app.get(`/${base}/save/:id/:index`, ({ params: { id, index } }): ErrorCode | string => 
-            {
+        app.get(`/${base}/save/:id/:index`, ({ params: { id, index } }): ErrorCode | string =>
+        {
             const save = updateSaveCache(db, id, index);
             if (save) return JSON.stringify(save.data);
             return { error: 'Not found', err_type: "NOT_FOUND" };
@@ -148,8 +148,8 @@ export namespace HttpHandler
             });
 
         //get events
-        app.post(`/${base}/events`, ({ body }) => 
-            {
+        app.post(`/${base}/events`, ({ body }) =>
+        {
             if (isUsingPlaceholderAdminToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
             if (body.token !== ADMIN_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
             GameEventsHandler.addEvent(body.data);
@@ -163,8 +163,8 @@ export namespace HttpHandler
             });
 
         // write player
-        app.post(`/${base}/player`, ({ body }): ErrorCode => 
-            {
+        app.post(`/${base}/player`, ({ body }): ErrorCode =>
+        {
             if (isUsingPlaceholderWriteToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
             if (body.token !== WRITE_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
             if (!Object.keys(body.data).length) return { error: "Incorrect body data type", err_type: "INSERT_FAIL" };
@@ -222,8 +222,8 @@ export namespace HttpHandler
         });
 
         // copies saves of one person to saves of another person
-        app.post(`/${base}/migrate`, ({ body }): MigrationResult => 
-            {
+        app.post(`/${base}/migrate`, ({ body }): MigrationResult =>
+        {
             if (isUsingPlaceholderWriteToken) return { error: "Using placeholder token", err_type: "INCORRECT_TOKEN" };
             if (body.token !== WRITE_TOKEN) return { error: "Incorrect token", err_type: "INCORRECT_TOKEN" };
 
